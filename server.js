@@ -14,12 +14,16 @@ function getChromePath() {
     const paths = [
         '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
         '/Applications/Chromium.app/Contents/MacOS/Chromium',
+        // Local chromium package path on Mac
+        './node_modules/chromium/lib/chromium/chrome-mac/Chromium.app/Contents/MacOS/Chromium',
         process.env.CHROME_PATH,
     ].filter(Boolean);
 
     for (const p of paths) {
         try {
+            // Check if path exists
             execSync(`test -f "${p}"`);
+            console.log(`🔍 Found Chrome/Chromium at: ${p}`);
             return p;
         } catch { }
     }
