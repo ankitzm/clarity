@@ -18,19 +18,18 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
         const variants = {
             primary: `
-        bg-[--color-accent] text-white
-        hover:bg-[--color-accent-hover]
+        bg-indigo-600 text-white shadow-sm
+        hover:bg-indigo-500
         active:scale-[0.98]
       `,
             secondary: `
-        bg-[--color-surface] text-[--color-text-primary]
-        border border-[--color-border]
-        hover:bg-[--color-accent-soft] hover:border-[--color-accent]
+        bg-white text-gray-900 border border-gray-200
+        hover:bg-gray-50 hover:border-gray-300
         active:scale-[0.98]
       `,
             ghost: `
-        bg-transparent text-[--color-text-secondary]
-        hover:bg-[--color-accent-soft] hover:text-[--color-accent]
+        bg-transparent text-gray-500
+        hover:bg-indigo-50 hover:text-indigo-600
       `,
         };
 

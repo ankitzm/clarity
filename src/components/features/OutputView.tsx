@@ -21,11 +21,11 @@ export function OutputView({ results, viewMode, onViewModeChange }: OutputViewPr
                 <button
                     onClick={() => onViewModeChange('text')}
                     className={`
-            px-4 py-2 text-sm font-medium rounded-[--radius-md]
-            transition-all duration-[--transition-fast]
+            px-4 py-2 text-sm font-medium rounded-md
+            transition-all duration-200
             ${viewMode === 'text'
-                            ? 'bg-[--color-accent] text-white'
-                            : 'text-[--color-text-secondary] hover:text-[--color-text-primary] hover:bg-[--color-accent-soft]'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                         }
           `}
                 >
@@ -34,11 +34,11 @@ export function OutputView({ results, viewMode, onViewModeChange }: OutputViewPr
                 <button
                     onClick={() => onViewModeChange('mindmap')}
                     className={`
-            px-4 py-2 text-sm font-medium rounded-[--radius-md]
-            transition-all duration-[--transition-fast]
+            px-4 py-2 text-sm font-medium rounded-md
+            transition-all duration-200
             ${viewMode === 'mindmap'
-                            ? 'bg-[--color-accent] text-white'
-                            : 'text-[--color-text-tertiary] cursor-not-allowed'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-gray-400 cursor-not-allowed'
                         }
           `}
                     disabled
@@ -49,11 +49,11 @@ export function OutputView({ results, viewMode, onViewModeChange }: OutputViewPr
                 <button
                     onClick={() => onViewModeChange('json')}
                     className={`
-            px-4 py-2 text-sm font-medium rounded-[--radius-md]
-            transition-all duration-[--transition-fast]
+            px-4 py-2 text-sm font-medium rounded-md
+            transition-all duration-200
             ${viewMode === 'json'
-                            ? 'bg-[--color-accent] text-white'
-                            : 'text-[--color-text-tertiary] cursor-not-allowed'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-gray-400 cursor-not-allowed'
                         }
           `}
                     disabled

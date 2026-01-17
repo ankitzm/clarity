@@ -32,7 +32,7 @@ export function HistoryPanel({
             {/* Panel */}
             <div className="
         fixed right-0 top-0 bottom-0 w-full max-w-md
-        bg-[--color-background] border-l border-[--color-border]
+        bg-white dark:bg-zinc-900 border-l border-gray-200 dark:border-zinc-800 shadow-2xl
         z-50 animate-slide-in-right
         flex flex-col
       ">

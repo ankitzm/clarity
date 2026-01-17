@@ -15,14 +15,13 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(
           inline-flex items-center gap-2
           h-9 px-3.5
           text-sm font-medium
-          rounded-[--radius-full]
-          border
-          transition-all duration-[--transition-fast]
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-[--color-accent] focus-visible:ring-offset-2
+          rounded-full
+          transition-all duration-200
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
           active:scale-[0.97]
           ${selected
-                        ? 'bg-[--color-accent] text-white border-transparent'
-                        : 'bg-[--color-surface] text-[--color-text-secondary] border-[--color-border] hover:border-[--color-accent] hover:text-[--color-accent]'
+                        ? 'bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-600/20'
+                        : 'bg-white text-gray-600 ring-1 ring-inset ring-gray-200 hover:ring-indigo-500/30 hover:text-indigo-600'
                     }
           ${className}
         `}
