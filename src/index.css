@@ -12,19 +12,19 @@
   --color-surface-elevated: #ffffff;
   --color-border: #e5e5e5;
   --color-border-subtle: #f0f0f0;
-  
+
   /* Text Colors */
   --color-text-primary: #171717;
   --color-text-secondary: #525252;
   --color-text-tertiary: #a3a3a3;
   --color-text-inverse: #fafafa;
-  
+
   /* Accent Colors - Indigo */
   --color-accent: #6366f1;
   --color-accent-hover: #4f46e5;
   --color-accent-soft: #eef2ff;
   --color-accent-soft-hover: #e0e7ff;
-  
+
   /* Status Colors */
   --color-success: #22c55e;
   --color-success-soft: #dcfce7;
@@ -32,24 +32,24 @@
   --color-warning-soft: #fef3c7;
   --color-error: #ef4444;
   --color-error-soft: #fee2e2;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  
+
   /* Border Radius */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --radius-full: 9999px;
-  
+
   /* Transitions */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  
+
   /* Font Family */
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
@@ -62,21 +62,21 @@
   --color-surface-elevated: #1f1f1f;
   --color-border: #262626;
   --color-border-subtle: #1f1f1f;
-  
+
   --color-text-primary: #fafafa;
   --color-text-secondary: #a3a3a3;
   --color-text-tertiary: #525252;
   --color-text-inverse: #171717;
-  
+
   --color-accent: #818cf8;
   --color-accent-hover: #a5b4fc;
   --color-accent-soft: #1e1b4b;
   --color-accent-soft-hover: #312e81;
-  
+
   --color-success-soft: #14532d;
   --color-warning-soft: #78350f;
   --color-error-soft: #7f1d1d;
-  
+
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
@@ -90,14 +90,14 @@
   * {
     box-sizing: border-box;
   }
-  
+
   html {
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
-  
+
   body {
     margin: 0;
     min-height: 100vh;
@@ -106,7 +106,7 @@
     line-height: 1.6;
     transition: background-color var(--transition-base), color var(--transition-base);
   }
-  
+
   /* Subtle noise texture overlay */
   body::before {
     content: '';
@@ -117,23 +117,23 @@
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
     z-index: 9999;
   }
-  
+
   .dark body::before {
     opacity: 0.03;
   }
-  
+
   #root {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
-  
+
   /* Focus styles */
   :focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
-  
+
   /* Selection */
   ::selection {
     background-color: var(--color-accent-soft);
@@ -149,15 +149,19 @@
   .text-balance {
     text-wrap: balance;
   }
-  
+
   .animate-fade-in {
     animation: fadeIn var(--transition-slow) ease-out;
   }
-  
+
   .animate-slide-up {
     animation: slideUp var(--transition-slow) ease-out;
   }
-  
+
+  .animate-slide-in-right {
+    animation: slideInRight var(--transition-slow) ease-out;
+  }
+
   .animate-pulse-subtle {
     animation: pulseSoft 2s ease-in-out infinite;
   }
@@ -171,6 +175,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -181,6 +186,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -188,11 +194,26 @@
 }
 
 @keyframes pulseSoft {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.7;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
