@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes, forwardRef } from 'react';
+import { type ButtonHTMLAttributes, forwardRef } from 'react';
 
 interface ChipProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     selected?: boolean;

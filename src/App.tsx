@@ -1,16 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from './components/layout/Header';
 import { InputSection } from './components/features/InputSection';
 import { ProcessingLog } from './components/features/ProcessingLog';
+import { OutputView } from './components/features/OutputView';
+import { HistoryPanel } from './components/features/HistoryPanel';
 import { useAnalysis } from './hooks/useAnalysis';
-import type { AnalysisTypeKey } from './types';
-import { ANALYSIS_TYPES } from './config/analysisTypes';
+import { useHistory } from './hooks/useHistory';
+import type { AnalysisTypeKey, ViewMode } from './types';
 
 type AppView = 'input' | 'analyzing' | 'results';
 
 function App() {
   const [view, setView] = useState<AppView>('input');
+  const [viewMode, setViewMode] = useState<ViewMode>('text');
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   const { session, logs, isLoading, startAnalysis, reset } = useAnalysis();
+  const { history, saveSession, getSession, deleteFromHistory, clearHistory } = useHistory();
+
+  // Save session when analysis completes
+  useEffect(() => {
+    if (session?.status === 'completed' && session.results.length > 0) {
+      saveSession(session);
+    }
+  }, [session, saveSession]);
 
   const handleAnalyze = async (url: string, types: AnalysisTypeKey[]) => {
     setView('analyzing');
@@ -23,9 +36,18 @@ function App() {
     setView('input');
   };
 
+  const handleHistorySelect = (id: string) => {
+    const savedSession = getSession(id);
+    if (savedSession) {
+      // For now, just close the panel - in a future update we could restore the session
+      setHistoryOpen(false);
+      // TODO: Implement session restoration
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <Header onHistoryClick={() => setHistoryOpen(true)} />
 
       <main className="flex-1 flex flex-col items-center px-4 py-12">
         {view === 'input' && (
@@ -88,58 +110,12 @@ function App() {
 
               {/* Right column - Results */}
               <div className="lg:col-span-2">
-                {session?.status === 'completed' || (session?.results && session.results.length > 0) ? (
-                  <div className="space-y-6">
-                    {/* View mode switcher placeholder */}
-                    <div className="flex gap-2 p-1 bg-[--color-surface] border border-[--color-border] rounded-[--radius-lg] w-fit">
-                      <button className="px-4 py-2 text-sm font-medium rounded-[--radius-md] bg-[--color-accent] text-white">
-                        Rich Text
-                      </button>
-                      <button
-                        className="px-4 py-2 text-sm font-medium rounded-[--radius-md] text-[--color-text-tertiary] hover:text-[--color-text-secondary]"
-                        disabled
-                        title="Coming soon"
-                      >
-                        Mind Map
-                      </button>
-                      <button
-                        className="px-4 py-2 text-sm font-medium rounded-[--radius-md] text-[--color-text-tertiary] hover:text-[--color-text-secondary]"
-                        disabled
-                        title="Coming soon"
-                      >
-                        JSON
-                      </button>
-                    </div>
-
-                    {/* Results */}
-                    {session.results.map((result) => (
-                      <div
-                        key={result.type}
-                        className="bg-[--color-surface] border border-[--color-border] rounded-[--radius-lg] overflow-hidden"
-                      >
-                        <div className="px-5 py-4 border-b border-[--color-border] bg-[--color-accent-soft]">
-                          <h3 className="font-semibold text-[--color-text-primary] flex items-center gap-2">
-                            <span>{ANALYSIS_TYPES[result.type].icon}</span>
-                            {ANALYSIS_TYPES[result.type].label}
-                          </h3>
-                        </div>
-                        <div className="p-5">
-                          <div className="prose prose-sm max-w-none text-[--color-text-primary]">
-                            {result.content ? (
-                              <div className="whitespace-pre-wrap">
-                                {result.content}
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2 text-[--color-text-tertiary]">
-                                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                Analyzing...
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                {session?.results && session.results.length > 0 ? (
+                  <OutputView
+                    results={session.results}
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                  />
                 ) : view === 'analyzing' ? (
                   <div className="bg-[--color-surface] border border-[--color-border] rounded-[--radius-lg] p-12 text-center">
                     <div className="w-12 h-12 mx-auto mb-4 border-4 border-[--color-accent] border-t-transparent rounded-full animate-spin" />
@@ -171,6 +147,16 @@ function App() {
       <footer className="py-6 text-center text-sm text-[--color-text-tertiary] border-t border-[--color-border]">
         <p>Built with care for clarity of thought ✨</p>
       </footer>
+
+      {/* History Panel */}
+      <HistoryPanel
+        history={history}
+        isOpen={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        onSelect={handleHistorySelect}
+        onDelete={deleteFromHistory}
+        onClear={clearHistory}
+      />
     </div>
   );
 }

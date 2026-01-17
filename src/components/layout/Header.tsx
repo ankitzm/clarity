@@ -1,6 +1,10 @@
 import { ThemeToggle } from '../ui';
 
-export function Header() {
+interface HeaderProps {
+    onHistoryClick?: () => void;
+}
+
+export function Header({ onHistoryClick }: HeaderProps) {
     return (
         <header className="
       sticky top-0 z-50
@@ -27,6 +31,7 @@ export function Header() {
                 {/* Actions */}
                 <div className="flex items-center gap-2">
                     <button
+                        onClick={onHistoryClick}
                         className="
               inline-flex items-center gap-1.5
               h-9 px-3
