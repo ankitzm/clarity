@@ -2,7 +2,6 @@ import { useState, useCallback, useRef } from 'react';
 import type {
     AnalysisTypeKey,
     LogEntry,
-    Conversation,
     AnalysisResult,
     AnalysisSession
 } from '../types';
@@ -12,7 +11,7 @@ interface UseAnalysisReturn {
     session: AnalysisSession | null;
     logs: LogEntry[];
     isLoading: boolean;
-    startAnalysis: (url: string, types: AnalysisTypeKey[]) => Promise<void>;
+    startAnalysis: (text: string, types: AnalysisTypeKey[]) => Promise<void>;
     reset: () => void;
 }
 
@@ -41,24 +40,64 @@ export function useAnalysis(): UseAnalysisReturn {
         );
     }, []);
 
-    const fetchConversation = useCallback(async (url: string): Promise<Conversation | null> => {
-        const response = await fetch('/api/fetch-chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url }),
-        });
+    const parseConversation = useCallback((text: string) => {
+        // Try to extract messages from the pasted text
+        const messages: { role: 'user' | 'assistant'; content: string }[] = [];
 
-        const data = await response.json();
+        // Split by common patterns
+        const lines = text.split('\n');
+        let currentRole: 'user' | 'assistant' | null = null;
+        let currentContent: string[] = [];
 
-        if (!data.success) {
-            throw new Error(data.error || 'Failed to fetch conversation');
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+
+            // Check for role indicators
+            const userMatch = trimmedLine.match(/^(You|User|Human|Me)[:：]/i);
+            const assistantMatch = trimmedLine.match(/^(ChatGPT|Assistant|AI|GPT|Claude)[:：]/i);
+
+            if (userMatch) {
+                // Save previous message
+                if (currentRole && currentContent.length > 0) {
+                    messages.push({ role: currentRole, content: currentContent.join('\n').trim() });
+                }
+                currentRole = 'user';
+                currentContent = [trimmedLine.slice(userMatch[0].length).trim()];
+            } else if (assistantMatch) {
+                // Save previous message
+                if (currentRole && currentContent.length > 0) {
+                    messages.push({ role: currentRole, content: currentContent.join('\n').trim() });
+                }
+                currentRole = 'assistant';
+                currentContent = [trimmedLine.slice(assistantMatch[0].length).trim()];
+            } else if (currentRole && trimmedLine) {
+                currentContent.push(trimmedLine);
+            }
         }
 
-        return data.conversation;
+        // Save last message
+        if (currentRole && currentContent.length > 0) {
+            messages.push({ role: currentRole, content: currentContent.join('\n').trim() });
+        }
+
+        // If no structured messages found, treat entire text as context
+        if (messages.length === 0) {
+            return {
+                parsed: false,
+                rawText: text,
+                messages: [],
+            };
+        }
+
+        return {
+            parsed: true,
+            rawText: text,
+            messages,
+        };
     }, []);
 
     const analyzeWithStreaming = useCallback(async (
-        conversation: Conversation,
+        conversationText: string,
         analysisType: AnalysisTypeKey,
         signal: AbortSignal
     ): Promise<string> => {
@@ -66,15 +105,15 @@ export function useAnalysis(): UseAnalysisReturn {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                conversation: conversation.messages,
+                conversationText,
                 analysisType,
-                conversationTitle: conversation.title,
             }),
             signal,
         });
 
         if (!response.ok) {
-            throw new Error('Analysis request failed');
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Analysis request failed');
         }
 
         const reader = response.body?.getReader();
@@ -132,7 +171,7 @@ export function useAnalysis(): UseAnalysisReturn {
         return content;
     }, []);
 
-    const startAnalysis = useCallback(async (url: string, types: AnalysisTypeKey[]) => {
+    const startAnalysis = useCallback(async (text: string, types: AnalysisTypeKey[]) => {
         // Abort any previous analysis
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
@@ -143,43 +182,38 @@ export function useAnalysis(): UseAnalysisReturn {
         setLogs([]);
         setSession(null);
 
+        // Parse the conversation
+        const parsed = parseConversation(text);
+        const title = parsed.messages.length > 0
+            ? parsed.messages[0].content.slice(0, 50) + '...'
+            : 'Conversation Analysis';
+
         const newSession: AnalysisSession = {
             id: crypto.randomUUID(),
             conversation: {
-                id: '',
-                title: '',
-                messages: [],
-                url,
-                fetchedAt: '',
+                id: crypto.randomUUID(),
+                title,
+                messages: parsed.messages,
+                url: '',
+                fetchedAt: new Date().toISOString(),
             },
             selectedTypes: types,
             results: [],
-            status: 'fetching',
+            status: 'analyzing',
             createdAt: new Date().toISOString(),
         };
         setSession(newSession);
 
         try {
-            // Step 1: Fetch conversation
             addLog('info', 'Starting analysis...');
-            const fetchLogId = addLog('processing', 'Fetching conversation from ChatGPT...').id;
 
-            const conversation = await fetchConversation(url);
-
-            if (!conversation) {
-                throw new Error('Failed to fetch conversation');
+            if (parsed.parsed) {
+                addLog('success', `Parsed ${parsed.messages.length} messages from conversation`);
+            } else {
+                addLog('info', 'Processing as raw text (no structured messages detected)');
             }
 
-            updateLog(fetchLogId, { type: 'success', message: 'Conversation fetched successfully' });
-            addLog('info', `Found ${conversation.messages.length} messages: "${conversation.title}"`);
-
-            setSession((prev) => prev ? {
-                ...prev,
-                conversation,
-                status: 'analyzing',
-            } : null);
-
-            // Step 2: Run each analysis type
+            // Run each analysis type
             const results: AnalysisResult[] = [];
 
             for (const type of types) {
@@ -188,7 +222,7 @@ export function useAnalysis(): UseAnalysisReturn {
 
                 try {
                     const content = await analyzeWithStreaming(
-                        conversation,
+                        text,
                         type,
                         abortControllerRef.current.signal
                     );
@@ -222,7 +256,7 @@ export function useAnalysis(): UseAnalysisReturn {
                     }
                     updateLog(analyzeLogId, {
                         type: 'error',
-                        message: `${typeLabel} analysis failed`
+                        message: `${typeLabel}: ${(error as Error).message}`
                     });
                     console.error(`Analysis error for ${type}:`, error);
                 }
@@ -250,7 +284,7 @@ export function useAnalysis(): UseAnalysisReturn {
         } finally {
             setIsLoading(false);
         }
-    }, [addLog, updateLog, fetchConversation, analyzeWithStreaming]);
+    }, [addLog, updateLog, parseConversation, analyzeWithStreaming]);
 
     const reset = useCallback(() => {
         if (abortControllerRef.current) {
