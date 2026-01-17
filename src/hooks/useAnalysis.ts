@@ -11,7 +11,7 @@ interface UseAnalysisReturn {
     session: AnalysisSession | null;
     logs: LogEntry[];
     isLoading: boolean;
-    startAnalysis: (text: string, types: AnalysisTypeKey[]) => Promise<void>;
+    startAnalysis: (input: string, types: AnalysisTypeKey[]) => Promise<void>;
     reset: () => void;
 }
 
@@ -41,7 +41,7 @@ export function useAnalysis(): UseAnalysisReturn {
     }, []);
 
     const parseConversation = useCallback((text: string) => {
-        // Try to extract messages from the pasted text
+        // Try to extract messages from the text
         const messages: { role: 'user' | 'assistant'; content: string }[] = [];
 
         // Split by common patterns
@@ -57,14 +57,12 @@ export function useAnalysis(): UseAnalysisReturn {
             const assistantMatch = trimmedLine.match(/^(ChatGPT|Assistant|AI|GPT|Claude)[:：]/i);
 
             if (userMatch) {
-                // Save previous message
                 if (currentRole && currentContent.length > 0) {
                     messages.push({ role: currentRole, content: currentContent.join('\n').trim() });
                 }
                 currentRole = 'user';
                 currentContent = [trimmedLine.slice(userMatch[0].length).trim()];
             } else if (assistantMatch) {
-                // Save previous message
                 if (currentRole && currentContent.length > 0) {
                     messages.push({ role: currentRole, content: currentContent.join('\n').trim() });
                 }
@@ -75,12 +73,10 @@ export function useAnalysis(): UseAnalysisReturn {
             }
         }
 
-        // Save last message
         if (currentRole && currentContent.length > 0) {
             messages.push({ role: currentRole, content: currentContent.join('\n').trim() });
         }
 
-        // If no structured messages found, treat entire text as context
         if (messages.length === 0) {
             return {
                 parsed: false,
@@ -140,7 +136,6 @@ export function useAnalysis(): UseAnalysisReturn {
                         const parsed = JSON.parse(data);
                         if (parsed.content) {
                             content += parsed.content;
-                            // Update session with streaming content
                             setSession((prev) => {
                                 if (!prev) return prev;
                                 const existingResult = prev.results.find((r) => r.type === analysisType);
@@ -171,8 +166,23 @@ export function useAnalysis(): UseAnalysisReturn {
         return content;
     }, []);
 
-    const startAnalysis = useCallback(async (text: string, types: AnalysisTypeKey[]) => {
-        // Abort any previous analysis
+    const fetchConversation = useCallback(async (url: string, signal: AbortSignal) => {
+        const response = await fetch('/api/fetch-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+            signal,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to fetch conversation');
+        }
+
+        return response.json();
+    }, []);
+
+    const startAnalysis = useCallback(async (input: string, types: AnalysisTypeKey[]) => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
@@ -182,30 +192,55 @@ export function useAnalysis(): UseAnalysisReturn {
         setLogs([]);
         setSession(null);
 
-        // Parse the conversation
-        const parsed = parseConversation(text);
-        const title = parsed.messages.length > 0
-            ? parsed.messages[0].content.slice(0, 50) + '...'
-            : 'Conversation Analysis';
-
-        const newSession: AnalysisSession = {
-            id: crypto.randomUUID(),
-            conversation: {
-                id: crypto.randomUUID(),
-                title,
-                messages: parsed.messages,
-                url: '',
-                fetchedAt: new Date().toISOString(),
-            },
-            selectedTypes: types,
-            results: [],
-            status: 'analyzing',
-            createdAt: new Date().toISOString(),
-        };
-        setSession(newSession);
-
         try {
-            addLog('info', 'Starting analysis...');
+            let conversationData;
+            let conversationText = input;
+            const signal = abortControllerRef.current.signal;
+
+            // Check if input is a URL
+            const isUrl = input.includes('chatgpt.com/share/') || input.includes('https://');
+
+            if (isUrl) {
+                addLog('info', 'Fetching conversation from ChatGPT...');
+                const result = await fetchConversation(input, signal);
+
+                if (!result.success || !result.conversation) {
+                    throw new Error(result.error || 'Failed to load conversation');
+                }
+
+                conversationData = result.conversation;
+                if (conversationData.rawText) {
+                    conversationText = conversationData.rawText;
+                } else {
+                    conversationText = conversationData.messages
+                        .map((m: any) => `${m.role === 'user' ? 'You' : 'ChatGPT'}: ${m.content}`)
+                        .join('\n\n');
+                }
+                addLog('success', `Fetched "${conversationData.title}" (${conversationText.length} chars)`);
+            } else {
+                addLog('info', 'Processing provided text...');
+            }
+
+            const parsed = parseConversation(conversationText);
+            const title = conversationData?.title || (parsed.messages.length > 0
+                ? parsed.messages[0].content.slice(0, 50) + '...'
+                : 'Conversation Analysis');
+
+            const newSession: AnalysisSession = {
+                id: crypto.randomUUID(),
+                conversation: {
+                    id: conversationData?.id || crypto.randomUUID(),
+                    title,
+                    messages: parsed.messages,
+                    url: conversationData?.url || '',
+                    fetchedAt: new Date().toISOString(),
+                },
+                selectedTypes: types,
+                results: [],
+                status: 'analyzing',
+                createdAt: new Date().toISOString(),
+            };
+            setSession(newSession);
 
             if (parsed.parsed) {
                 addLog('success', `Parsed ${parsed.messages.length} messages from conversation`);
@@ -213,18 +248,19 @@ export function useAnalysis(): UseAnalysisReturn {
                 addLog('info', 'Processing as raw text (no structured messages detected)');
             }
 
-            // Run each analysis type
             const results: AnalysisResult[] = [];
 
             for (const type of types) {
+                if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+
                 const typeLabel = ANALYSIS_TYPES[type].label;
                 const analyzeLogId = addLog('processing', `Analyzing: ${typeLabel}...`).id;
 
                 try {
                     const content = await analyzeWithStreaming(
-                        text,
+                        conversationText,
                         type,
-                        abortControllerRef.current.signal
+                        signal
                     );
 
                     results.push({
@@ -238,7 +274,6 @@ export function useAnalysis(): UseAnalysisReturn {
                         message: `${typeLabel} analysis complete`
                     });
 
-                    // Update session with final result
                     setSession((prev) => prev ? {
                         ...prev,
                         results: prev.results.map((r) =>
@@ -284,7 +319,7 @@ export function useAnalysis(): UseAnalysisReturn {
         } finally {
             setIsLoading(false);
         }
-    }, [addLog, updateLog, parseConversation, analyzeWithStreaming]);
+    }, [addLog, updateLog, parseConversation, analyzeWithStreaming, fetchConversation]);
 
     const reset = useCallback(() => {
         if (abortControllerRef.current) {
