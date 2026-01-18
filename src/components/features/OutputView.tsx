@@ -1,5 +1,6 @@
 import { Card } from '../ui';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { MindMapView } from './MindMapView';
 import { ANALYSIS_TYPES } from '../../config/analysisTypes';
 import type { AnalysisResult, ViewMode } from '../../types';
 
@@ -7,9 +8,10 @@ interface OutputViewProps {
     results: AnalysisResult[];
     viewMode: ViewMode;
     onViewModeChange: (mode: ViewMode) => void;
+    conversationTitle: string;
 }
 
-export function OutputView({ results, viewMode, onViewModeChange }: OutputViewProps) {
+export function OutputView({ results, viewMode, onViewModeChange, conversationTitle }: OutputViewProps) {
     if (results.length === 0) {
         return null;
     }
@@ -38,11 +40,9 @@ export function OutputView({ results, viewMode, onViewModeChange }: OutputViewPr
             transition-all duration-200
             ${viewMode === 'mindmap'
                             ? 'bg-indigo-600 text-white shadow-sm'
-                            : 'text-gray-400 cursor-not-allowed'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                         }
           `}
-                    disabled
-                    title="Coming soon"
                 >
                     Mind Map
                 </button>
@@ -98,15 +98,7 @@ export function OutputView({ results, viewMode, onViewModeChange }: OutputViewPr
             )}
 
             {viewMode === 'mindmap' && (
-                <Card variant="outlined" padding="lg" className="text-center">
-                    <div className="text-4xl mb-4">🗺️</div>
-                    <h3 className="text-lg font-semibold text-[--color-text-primary] mb-2">
-                        Mind Map View
-                    </h3>
-                    <p className="text-[--color-text-secondary]">
-                        Coming soon! This feature will visualize your conversation as an interactive graph.
-                    </p>
-                </Card>
+                <MindMapView results={results} conversationTitle={conversationTitle} />
             )}
 
             {viewMode === 'json' && (

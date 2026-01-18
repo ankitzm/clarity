@@ -115,6 +115,7 @@ function App() {
                     results={session.results}
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
+                    conversationTitle={session.conversation.title}
                   />
                 ) : view === 'analyzing' ? (
                   <div className="bg-[--color-surface] border border-[--color-border] rounded-[--radius-lg] p-12 text-center">

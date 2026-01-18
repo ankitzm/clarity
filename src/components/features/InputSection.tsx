@@ -78,7 +78,7 @@ export function InputSection({ onAnalyze, isLoading = false }: InputSectionProps
             <div className="text-center mb-10">
                 <h1 className="text-4xl sm:text-5xl font-bold text-[--color-text-primary] mb-4 text-balance leading-tight">
                     Get Clarity from your
-                    <span className="bg-gradient-to-r from-[--color-accent] to-purple-500 bg-clip-text text-transparent"> ChatGPT </span>
+                    <span className="bg-gradient-to-r to-purple-500 from-black to-purple-500 bg-clip-text text-transparent"> ChatGPT </span>
                     conversations
                 </h1>
                 <p className="text-lg text-[--color-text-secondary] max-w-lg mx-auto">
@@ -94,8 +94,8 @@ export function InputSection({ onAnalyze, isLoading = false }: InputSectionProps
                         <button
                             onClick={() => { setInputMode('url'); setError(undefined); }}
                             className={`px-4 py-1.5 text-sm font-medium rounded-[--radius-sm] transition-all ${inputMode === 'url'
-                                    ? 'bg-[--color-surface] text-[--color-text-primary] shadow-sm'
-                                    : 'text-[--color-text-secondary] hover:text-[--color-text-primary]'
+                                ? 'bg-[--color-surface] text-[--color-text-primary] shadow-sm'
+                                : 'text-[--color-text-secondary] hover:text-[--color-text-primary]'
                                 }`}
                         >
                             🔗 Share Link
@@ -103,8 +103,8 @@ export function InputSection({ onAnalyze, isLoading = false }: InputSectionProps
                         <button
                             onClick={() => { setInputMode('text'); setError(undefined); }}
                             className={`px-4 py-1.5 text-sm font-medium rounded-[--radius-sm] transition-all ${inputMode === 'text'
-                                    ? 'bg-[--color-surface] text-[--color-text-primary] shadow-sm'
-                                    : 'text-[--color-text-secondary] hover:text-[--color-text-primary]'
+                                ? 'bg-[--color-surface] text-[--color-text-primary] shadow-sm'
+                                : 'text-[--color-text-secondary] hover:text-[--color-text-primary]'
                                 }`}
                         >
                             📝 Paste Text

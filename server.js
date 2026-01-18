@@ -346,6 +346,126 @@ ${conversation}`,
     return prompts[type] || prompts.summary;
 }
 
+// Generate mind map
+app.post('/api/generate-mindmap', async (req, res) => {
+    const { results, conversationTitle } = req.body;
+
+    if (!results || !Array.isArray(results) || results.length === 0) {
+        return res.status(400).json({ error: 'Missing or invalid analysis results' });
+    }
+
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+        return res.status(500).json({
+            error: 'API key not configured'
+        });
+    }
+
+    // Prepare context from analysis results
+    const context = results.map(r => `
+--- ANALYSIS TYPE: ${r.type.toUpperCase()} ---
+${r.content.substring(0, 2000)} // Truncate to avoid token limits if needed
+`).join('\n');
+
+    const prompt = `Create a mind map visualization for the conversation titled "${conversationTitle}".
+    
+Based on the following analysis of the conversation, generate a JSON structure for a mind map.
+The mind map should have a central node for the title, main nodes for key themes/insights, and sub-nodes for details.
+
+Return ONLY valid JSON matching this structure:
+{
+    "nodes": [
+        {
+            "id": "string",
+            "type": "central" | "main" | "sub" | "action" | "insight",
+            "label": "string",
+            "data": {
+                "description": "string (optional)",
+                "icon": "string (emoji optional)",
+                "color": "string (hex optional)"
+            },
+            "position": { "x": number, "y": number }
+        }
+    ],
+    "edges": [
+        {
+            "id": "string",
+            "source": "string", 
+            "target": "string",
+            "label": "string (optional)"
+        }
+    ]
+}
+
+Layout Rules:
+1. Central node at x=0, y=0
+2. Main nodes in a circle around center (radius ~300)
+3. Sub/Action/Insight nodes branching out from their parents (radius ~600)
+4. Ensure no nodes overlap
+5. Use "central" type for the main title
+6. Use "action" type for action items
+7. Use "insight" type for key insights
+8. Use "main" type for major themes
+9. Use "sub" type for details
+
+CONTEXT:
+${context}`;
+
+    try {
+        console.log(`\n🧠 Generating Mind Map for: ${conversationTitle}`);
+
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'http://localhost:5173',
+                'X-Title': 'Clarity',
+            },
+            body: JSON.stringify({
+                model: 'xiaomi/mimo-v2-flash:free',
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are a visualization expert. You output ONLY valid JSON data for mind maps. No markdown, no explanations.',
+                    },
+                    {
+                        role: 'user',
+                        content: prompt,
+                    },
+                ],
+                response_format: { type: "json_object" }
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('OpenRouter error:', response.status, errorText);
+            throw new Error(`OpenRouter API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+
+        let mindMapData;
+        try {
+            mindMapData = JSON.parse(content);
+        } catch (e) {
+            console.error('Failed to parse JSON:', content);
+            throw new Error('AI returned invalid JSON');
+        }
+
+        return res.json({
+            success: true,
+            mindMap: mindMapData
+        });
+
+    } catch (error) {
+        console.error('Mind map generation error:', error);
+        return res.status(500).json({ error: 'Failed to generate mind map: ' + error.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`
 🚀 Clarity API Server running at http://localhost:${PORT}
@@ -353,5 +473,6 @@ app.listen(PORT, () => {
    Endpoints:
    - POST /api/fetch-chat  (fetch from ChatGPT share link)
    - POST /api/analyze     (AI analysis)
+   - POST /api/generate-mindmap (Mind Map)
 `);
 });

@@ -87,3 +87,41 @@ export interface AnalyzeResponse {
     content?: string;
     error?: string;
 }
+
+// Mind Map Types
+export type MindMapNodeType = 'central' | 'main' | 'sub' | 'action' | 'insight';
+
+export interface MindMapNode {
+    id: string;
+    type: MindMapNodeType;
+    label: string;
+    data: {
+        description?: string;
+        icon?: string;
+        analysisType?: AnalysisTypeKey;
+        color?: string;
+    };
+    position: {
+        x: number;
+        y: number;
+    };
+}
+
+export interface MindMapEdge {
+    id: string;
+    source: string;
+    target: string;
+    label?: string;
+    animated?: boolean;
+}
+
+export interface MindMapData {
+    nodes: MindMapNode[];
+    edges: MindMapEdge[];
+}
+
+export interface GenerateMindMapResponse {
+    success: boolean;
+    mindMap?: MindMapData;
+    error?: string;
+}
