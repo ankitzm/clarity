@@ -46,7 +46,7 @@ export function OutputView({ results, viewMode, onViewModeChange }: OutputViewPr
                 >
                     Mind Map
                 </button>
-                <button
+                {/* <button
                     onClick={() => onViewModeChange('json')}
                     className={`
             px-4 py-2 text-sm font-medium rounded-md
@@ -60,7 +60,7 @@ export function OutputView({ results, viewMode, onViewModeChange }: OutputViewPr
                     title="Coming soon"
                 >
                     JSON
-                </button>
+                </button> */}
             </div>
 
             {/* Results */}
