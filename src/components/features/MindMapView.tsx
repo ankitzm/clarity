@@ -1,8 +1,10 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
+import { createPortal } from 'react-dom';
 import ReactFlow, {
     Background,
     Controls,
     MiniMap,
+    Panel,
     useNodesState,
     useEdgesState,
     ConnectionLineType,
@@ -81,6 +83,7 @@ export function MindMapView({ results, conversationTitle }: MindMapViewProps) {
     const { mindMapData, isGenerating, error, generateMindMap } = useMindMap();
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const [isFullScreen, setIsFullScreen] = useState(false);
 
     // Generate mind map when component mounts or results change
     useEffect(() => {
@@ -145,6 +148,27 @@ export function MindMapView({ results, conversationTitle }: MindMapViewProps) {
         }, 100);
     }, []);
 
+    const toggleFullScreen = () => {
+        setIsFullScreen(!isFullScreen);
+    };
+
+    // Icons
+    const MaximizeIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+        </svg>
+    );
+
+    const CloseIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+    );
+
     // Loading state
     if (isGenerating) {
         return (
@@ -194,63 +218,104 @@ export function MindMapView({ results, conversationTitle }: MindMapViewProps) {
         );
     }
 
+    const flowContent = (
+        <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onInit={onInit}
+            nodeTypes={nodeTypes}
+            connectionLineType={ConnectionLineType.SmoothStep}
+            fitView
+            attributionPosition="bottom-left"
+            minZoom={0.2}
+            maxZoom={2}
+            defaultEdgeOptions={{
+                type: ConnectionLineType.SmoothStep,
+                animated: false,
+            }}
+        >
+            <Background
+                color="var(--color-border)"
+                gap={16}
+                size={1}
+            />
+            <Controls
+                style={{
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                }}
+            />
+            <MiniMap
+                nodeColor={(node) => {
+                    const nodeType = (node.data as any)?.nodeType;
+                    switch (nodeType) {
+                        case 'central':
+                            return '#667eea';
+                        case 'main':
+                            return '#f5576c';
+                        case 'action':
+                            return '#4facfe';
+                        case 'insight':
+                            return '#43e97b';
+                        default:
+                            return '#e5e7eb';
+                    }
+                }}
+                style={{
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '12px',
+                }}
+                maskColor="rgba(0, 0, 0, 0.1)"
+            />
+            <Panel position="top-right">
+                <button
+                    onClick={toggleFullScreen}
+                    className="
+                        p-2 rounded-lg 
+                        bg-[--color-surface] 
+                        border border-[--color-border] 
+                        text-[--color-text-secondary]
+                        hover:text-[--color-text-primary]
+                        hover:bg-[--color-surface-elevated]
+                        shadow-sm
+                        transition-all duration-200
+                        hover:scale-105
+                        active:scale-95
+                    "
+                    title={isFullScreen ? "Close Fullscreen" : "Fullscreen"}
+                >
+                    {isFullScreen ? <CloseIcon /> : <MaximizeIcon />}
+                </button>
+            </Panel>
+        </ReactFlow>
+    );
+
+    if (isFullScreen) {
+        return createPortal(
+            <div
+                className="fixed inset-0 z-[9999]"
+                style={{
+                    backgroundColor: 'var(--color-background)',
+                    width: '100vw',
+                    height: '100vh',
+                    animation: 'fadeIn 0.2s ease-out'
+                }}
+            >
+                {flowContent}
+            </div>,
+            document.body
+        );
+    }
+
     return (
         <Card variant="default" padding="none" className="overflow-hidden">
             <div style={{ width: '100%', height: '700px' }}>
-                <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onInit={onInit}
-                    nodeTypes={nodeTypes}
-                    connectionLineType={ConnectionLineType.SmoothStep}
-                    fitView
-                    attributionPosition="bottom-left"
-                    minZoom={0.2}
-                    maxZoom={2}
-                    defaultEdgeOptions={{
-                        type: ConnectionLineType.SmoothStep,
-                        animated: false,
-                    }}
-                >
-                    <Background
-                        color="var(--color-border)"
-                        gap={16}
-                        size={1}
-                    />
-                    <Controls
-                        style={{
-                            background: 'var(--color-surface)',
-                            border: '1px solid var(--color-border)',
-                            borderRadius: '12px',
-                            overflow: 'hidden',
-                        }}
-                    />
-                    <MiniMap
-                        nodeColor={(node) => {
-                            const nodeType = (node.data as any)?.nodeType;
-                            switch (nodeType) {
-                                case 'central':
-                                    return '#667eea';
-                                case 'main':
-                                    return '#f5576c';
-                                case 'action':
-                                    return '#4facfe';
-                                case 'insight':
-                                    return '#43e97b';
-                                default:
-                                    return '#e5e7eb';
-                            }
-                        }}
-                        style={{
-                            background: 'var(--color-surface)',
-                            border: '1px solid var(--color-border)',
-                            borderRadius: '12px',
-                        }}
-                        maskColor="rgba(0, 0, 0, 0.1)"
-                    />
-                </ReactFlow>
+                {flowContent}
             </div>
         </Card>
     );
