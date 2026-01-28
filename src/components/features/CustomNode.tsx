@@ -113,9 +113,25 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
                                 fontSize: '12px',
                                 opacity: 0.9,
                                 lineHeight: '1.4',
+                                textAlign: 'left',
                             }}
                         >
-                            {description}
+                            {description.includes('•') || description.includes('\n') ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    {description.split(/\n|•/).map((line, i) => {
+                                        const cleanLine = line.trim();
+                                        if (!cleanLine) return null;
+                                        return (
+                                            <div key={i} style={{ display: 'flex', gap: '4px', alignItems: 'flex-start' }}>
+                                                <span style={{ opacity: 0.6 }}>•</span>
+                                                <span>{cleanLine}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                description
+                            )}
                         </div>
                     )}
                 </div>

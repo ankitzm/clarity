@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer';
 import { execSync } from 'child_process';
 
 const app = express();
@@ -8,27 +8,6 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
 const PORT = 3001;
-
-// Find Chrome executable
-function getChromePath() {
-    const paths = [
-        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-        '/Applications/Chromium.app/Contents/MacOS/Chromium',
-        // Local chromium package path on Mac
-        './node_modules/chromium/lib/chromium/chrome-mac/Chromium.app/Contents/MacOS/Chromium',
-        process.env.CHROME_PATH,
-    ].filter(Boolean);
-
-    for (const p of paths) {
-        try {
-            // Check if path exists
-            execSync(`test -f "${p}"`);
-            console.log(`🔍 Found Chrome/Chromium at: ${p}`);
-            return p;
-        } catch { }
-    }
-    return null;
-}
 
 // Fetch ChatGPT conversation from share link
 app.post('/api/fetch-chat', async (req, res) => {
@@ -51,18 +30,9 @@ app.post('/api/fetch-chat', async (req, res) => {
 
     console.log(`\n🔗 Fetching: ${shareUrl}`);
 
-    const chromePath = getChromePath();
-    if (!chromePath) {
-        return res.status(500).json({
-            success: false,
-            error: 'Chrome not found. Please install Google Chrome.'
-        });
-    }
-
     let browser;
     try {
         browser = await puppeteer.launch({
-            executablePath: chromePath,
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
         });
@@ -361,54 +331,67 @@ app.post('/api/generate-mindmap', async (req, res) => {
         });
     }
 
-    // Prepare context from analysis results
-    const context = results.map(r => `
---- ANALYSIS TYPE: ${r.type.toUpperCase()} ---
-${r.content.substring(0, 2000)} // Truncate to avoid token limits if needed
-`).join('\n');
+    // Prioritize Summary and Insights for the context
+    const summaryResult = results.find(r => r.type === 'summary');
+    const insightsResult = results.find(r => r.type === 'insights');
+    const topicsResult = results.find(r => r.type === 'topics');
 
-    const prompt = `Create a mind map visualization for the conversation titled "${conversationTitle}".
-    
-Based on the following analysis of the conversation, generate a JSON structure for a mind map.
-The mind map should have a central node for the title, main nodes for key themes/insights, and sub-nodes for details.
+    // Construct focused context
+    let context = '';
+    if (summaryResult) context += `\n--- SUMMARY ---\n${summaryResult.content}\n`;
+    if (insightsResult) context += `\n--- KEY INSIGHTS ---\n${insightsResult.content}\n`;
+    if (topicsResult) context += `\n--- TOPICS ---\n${topicsResult.content}\n`;
 
-Return ONLY valid JSON matching this structure:
+    // Add other results if space permits, but lower priority
+    const otherResults = results.filter(r => !['summary', 'insights', 'topics'].includes(r.type));
+    otherResults.forEach(r => {
+        if (context.length < 6000) {
+            context += `\n--- ${r.type.toUpperCase()} ---\n${r.content.substring(0, 1000)}\n`;
+        }
+    });
+
+    const prompt = `Create a structured mind map for the conversation "${conversationTitle}".
+
+GOAL: Visualize the CORE CONCEPTS and KEY TAKEAWAYS. Do not just copy text.
+Use the "summary" and "insights" as your primary source.
+
+STRUCTURE:
+1. Central Node: Conversation Title
+2. Main Nodes: 3-5 Major Themes or Categories
+3. Sub Nodes: Specific details, facts, or insights belonging to themes
+4. Action Nodes: Key tasks or next steps (if any)
+
+CONTENT RULES:
+- keep "label" SHORT (1-5 words max)
+- use "description" for details
+- IF description is long (>30 chars), format it as a BULLET LIST using "•" symbol.
+- LIMIT total nodes to 20-25 to avoid clutter.
+
+Return JSON:
 {
     "nodes": [
         {
-            "id": "string",
+            "id": "unique_id",
             "type": "central" | "main" | "sub" | "action" | "insight",
-            "label": "string",
+            "label": "Short Title",
             "data": {
-                "description": "string (optional)",
-                "icon": "string (emoji optional)",
-                "color": "string (hex optional)"
-            },
-            "position": { "x": number, "y": number }
+                "description": "• Key point 1\n• Key point 2\n• Key point 3",
+                "icon": "emoji",
+                "color": "optional hex"
+            }
         }
     ],
     "edges": [
         {
-            "id": "string",
-            "source": "string", 
-            "target": "string",
-            "label": "string (optional)"
+            "id": "e1",
+            "source": "source_id", 
+            "target": "target_id",
+            "label": "connection label (optional)"
         }
     ]
 }
 
-Layout Rules:
-1. Central node at x=0, y=0
-2. Main nodes in a circle around center (radius ~300)
-3. Sub/Action/Insight nodes branching out from their parents (radius ~600)
-4. Ensure no nodes overlap
-5. Use "central" type for the main title
-6. Use "action" type for action items
-7. Use "insight" type for key insights
-8. Use "main" type for major themes
-9. Use "sub" type for details
-
-CONTEXT:
+Input Context:
 ${context}`;
 
     try {
@@ -427,7 +410,7 @@ ${context}`;
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are a visualization expert. You output ONLY valid JSON data for mind maps. No markdown, no explanations.',
+                        content: 'You are a data visualization expert. Produce clean, structured JSON for mind maps. Focus on clarity and hierarchy.',
                     },
                     {
                         role: 'user',

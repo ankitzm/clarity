@@ -9,6 +9,7 @@ import ReactFlow, {
     type Node,
     type Edge,
 } from 'reactflow';
+import dagre from 'dagre';
 import 'reactflow/dist/style.css';
 import { CustomNode } from './CustomNode';
 import { useMindMap } from '../../hooks/useMindMap';
@@ -25,6 +26,57 @@ const nodeTypes = {
     custom: CustomNode,
 };
 
+// Layout configuration
+const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
+    const dagreGraph = new dagre.graphlib.Graph();
+    dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+    // Set graph direction and spacing
+    dagreGraph.setGraph({
+        rankdir: 'LR',
+        ranksep: 200,
+        nodesep: 50
+    });
+
+    // Add nodes to graph
+    nodes.forEach((node) => {
+        // Adjust width/height based on node type
+        let width = 200;
+        let height = 100;
+
+        switch (node.type) {
+            case 'central': width = 300; height = 150; break;
+            case 'main': width = 250; height = 120; break;
+            default: width = 220; height = 100;
+        }
+
+        dagreGraph.setNode(node.id, { width, height });
+    });
+
+    edges.forEach((edge) => {
+        dagreGraph.setEdge(edge.source, edge.target);
+    });
+
+    dagre.layout(dagreGraph);
+
+    const layoutedNodes = nodes.map((node) => {
+        const nodeWithPosition = dagreGraph.node(node.id);
+
+        // Add random slight offset to prevent perfectly straight lines which look unnatural
+        const randomY = Math.random() * 20 - 10;
+
+        return {
+            ...node,
+            position: {
+                x: nodeWithPosition.x - (nodeWithPosition.width / 2),
+                y: nodeWithPosition.y - (nodeWithPosition.height / 2) + randomY,
+            },
+        };
+    });
+
+    return { nodes: layoutedNodes, edges };
+};
+
 export function MindMapView({ results, conversationTitle }: MindMapViewProps) {
     const { mindMapData, isGenerating, error, generateMindMap } = useMindMap();
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -37,13 +89,13 @@ export function MindMapView({ results, conversationTitle }: MindMapViewProps) {
         }
     }, [results, conversationTitle, mindMapData, isGenerating, generateMindMap]);
 
-    // Convert mind map data to ReactFlow nodes and edges
+    // Convert mind map data to ReactFlow nodes and edges with Layout
     useEffect(() => {
         if (mindMapData) {
-            const reactFlowNodes: Node[] = mindMapData.nodes.map((node) => ({
+            const initialNodes: Node[] = mindMapData.nodes.map((node) => ({
                 id: node.id,
                 type: 'custom',
-                position: node.position,
+                position: { x: 0, y: 0 }, // Initial position will be calculated by layout
                 data: {
                     label: node.label,
                     description: node.data.description,
@@ -53,12 +105,12 @@ export function MindMapView({ results, conversationTitle }: MindMapViewProps) {
                 },
             }));
 
-            const reactFlowEdges: Edge[] = mindMapData.edges.map((edge) => ({
+            const initialEdges: Edge[] = mindMapData.edges.map((edge) => ({
                 id: edge.id,
                 source: edge.source,
                 target: edge.target,
                 label: edge.label,
-                animated: edge.animated || false,
+                animated: false,
                 type: ConnectionLineType.SmoothStep,
                 style: {
                     stroke: '#667eea',
@@ -75,8 +127,14 @@ export function MindMapView({ results, conversationTitle }: MindMapViewProps) {
                 },
             }));
 
-            setNodes(reactFlowNodes);
-            setEdges(reactFlowEdges);
+            // Apply auto-layout
+            const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+                initialNodes,
+                initialEdges
+            );
+
+            setNodes(layoutedNodes);
+            setEdges(layoutedEdges);
         }
     }, [mindMapData, setNodes, setEdges]);
 

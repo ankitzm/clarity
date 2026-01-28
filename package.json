@@ -12,10 +12,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "chromium": "^3.0.3",
+    "@types/dagre": "^0.7.53",
     "cors": "^2.8.5",
+    "dagre": "^0.8.5",
     "express": "^5.2.1",
-    "puppeteer-core": "^24.35.0",
+    "puppeteer": "^24.35.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
