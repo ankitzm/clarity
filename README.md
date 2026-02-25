@@ -2,7 +2,16 @@
 
 **Turn ChatGPT conversations into structured insights and interactive mind maps.**
 
-[![Demo Video](https://img.shields.io/badge/📺_Watch-Demo_Video-1DA1F2?style=for-the-badge&logo=x&logoColor=white)](https://x.com/ankitzm/status/2013125015970173385?s=20)
+---
+
+## 📺 Product Demo
+
+> [!IMPORTANT]
+> **Check out the live demo and walkthrough on X:**
+> ### [🚀 Watch Clarity in Action](https://x.com/ankitzm/status/2013125015970173385?s=20)
+> *Follow the link above to see the full video demonstration of the mind map generation and AI analysis.*
+
+---
 
 Clarity is a high-performance analyzer that fetches data from ChatGPT share links, processes it through advanced LLMs via OpenRouter, and generates interactive visual representations of your discussions.
 
