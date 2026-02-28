@@ -53,7 +53,7 @@ export default async function handler(
                 'X-Title': 'Clarity - ChatGPT Analyzer',
             },
             body: JSON.stringify({
-                model: 'stepfun/step-3.5-flash:free',
+                model: 'nvidia/nemotron-3-nano-30b-a3b:free',
                 messages: [
                     {
                         role: 'system',
