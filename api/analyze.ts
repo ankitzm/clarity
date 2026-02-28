@@ -53,7 +53,7 @@ export default async function handler(
                 'X-Title': 'Clarity - ChatGPT Analyzer',
             },
             body: JSON.stringify({
-                model: 'xiaomi/mimo-v2-flash:free',
+                model: 'stepfun/step-3.5-flash:free',
                 messages: [
                     {
                         role: 'system',

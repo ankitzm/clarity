@@ -140,7 +140,7 @@ app.post('/api/analyze', async (req, res) => {
                 'X-Title': 'Clarity',
             },
             body: JSON.stringify({
-                model: 'xiaomi/mimo-v2-flash:free',
+                model: 'stepfun/step-3.5-flash:free',
                 messages: [
                     {
                         role: 'system',
@@ -406,7 +406,7 @@ ${context}`;
                 'X-Title': 'Clarity',
             },
             body: JSON.stringify({
-                model: 'xiaomi/mimo-v2-flash:free',
+                model: 'stepfun/step-3.5-flash:free',
                 messages: [
                     {
                         role: 'system',
